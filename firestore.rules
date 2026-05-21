@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Function to validate path variables or IDs
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Core validation helper for survey response data
+    function isValidSurveyResponse(data) {
+      return data.keys().hasAll([
+        'fullName', 'birthDate', 'q1_gender', 'q2_grade', 'q3_location',
+        'q4_livingWith', 'q5_parentsHome', 'q6_hasOwnPhone', 'q7_phoneHours',
+        'q8_phoneUsage', 'q9_studyWithPhone', 'q10_distractor', 'q11_experienced',
+        'q12_selfStudyHours', 'q13_easilyDistracted', 'q14_wantsFocusDevice',
+        'q15_deviceOpinion', 'createdAt'
+      ])
+      && data.fullName is string && data.fullName.size() <= 150
+      && data.birthDate is string && data.birthDate.size() <= 15
+      && data.q1_gender is string && data.q1_gender.size() <= 15
+      && data.q2_grade is string && data.q2_grade.size() <= 15
+      && data.q3_location is string && data.q3_location.size() <= 30
+      && data.q4_livingWith is string && data.q4_livingWith.size() <= 40
+      && data.q5_parentsHome is string && data.q5_parentsHome.size() <= 40
+      && data.q6_hasOwnPhone is string && data.q6_hasOwnPhone.size() <= 15
+      && data.q7_phoneHours is string && data.q7_phoneHours.size() <= 40
+      && data.q8_phoneUsage is list && data.q8_phoneUsage.size() <= 15
+      && data.q9_studyWithPhone is string && data.q9_studyWithPhone.size() <= 40
+      && data.q10_distractor is string && data.q10_distractor.size() <= 40
+      && data.q11_experienced is list && data.q11_experienced.size() <= 15
+      && data.q12_selfStudyHours is string && data.q12_selfStudyHours.size() <= 40
+      && data.q13_easilyDistracted is string && data.q13_easilyDistracted.size() <= 15
+      && data.q14_wantsFocusDevice is string && data.q14_wantsFocusDevice.size() <= 15
+      && data.q15_deviceOpinion is string && data.q15_deviceOpinion.size() <= 40
+      && (!data.keys().hasAny(['q16_phoneImpact']) || (data.q16_phoneImpact is string && data.q16_phoneImpact.size() <= 2000))
+      && (!data.keys().hasAny(['q17_desiredFeatures']) || (data.q17_desiredFeatures is string && data.q17_desiredFeatures.size() <= 2000))
+      && data.createdAt == request.time;
+    }
+
+    match /survey_responses/{responseId} {
+      // Create is public as long as format is strictly correct
+      allow create: if isValidId(responseId) && isValidSurveyResponse(request.resource.data);
+      
+      // Reading: Only signed-in administrators can list or read for evaluation
+      allow read, list: if request.auth != null;
+
+      // Update and delete are forbidden for everyone
+      allow update, delete: if false;
+    }
+  }
+}
