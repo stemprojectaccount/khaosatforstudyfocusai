@@ -130,7 +130,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
     const mockNames = ['Lê Hoàng Long', 'Nguyễn Thị Minh', 'Trần Tiến Đạt', 'Vũ Khánh Huyền', 'Phạm Minh Quân', 'Hoàng Bảo Ngọc'];
     const mockDobs = ['2011-04-12', '2010-08-25', '2012-01-05', '2009-11-20', '2010-03-15', '2011-09-02'];
     const genders = ['Nam', 'Nữ'];
-    const grades = ['6', '7', '8', '9', '10', '11', '12'];
+    const grades = ['6', '7', '8', '9'];
     const locations = ['Thành phố', 'Nông thôn'];
     const livingWiths = ['Bố mẹ', 'Ông bà', 'Người thân khác'];
     const parentsHomes = ['Thường xuyên', 'Thỉnh thoảng', 'Ít khi'];
@@ -199,7 +199,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
   };
 
   const getGradeData = () => {
-    const grades = ['6', '7', '8', '9', '10', '11', '12'];
+    const grades = ['6', '7', '8', '9'];
     const counts: { [key: string]: number } = {};
     grades.forEach(g => { counts[g] = 0; });
     responses.forEach(r => {

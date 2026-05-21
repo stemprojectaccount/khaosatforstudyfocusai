@@ -245,8 +245,8 @@ export default function SurveyForm({
                     <label className="block text-sm font-bold text-slate-800">
                       2. Em đang học khối lớp nào: <span className="text-red-500">*</span>
                     </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {['6', '7', '8', '9', '10', '11', '12'].map((grade) => (
+                    <div className="grid grid-cols-4 gap-2">
+                      {['6', '7', '8', '9'].map((grade) => (
                         <button
                           key={grade}
                           id={`opt-q2_grade-Lớp-${grade}`}
