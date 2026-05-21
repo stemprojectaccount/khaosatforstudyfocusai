@@ -1,5 +1,5 @@
 {
-  "name": "Khảo sát Thiết bị Học tập AI",
+  "name": "Khảo sát chống nghiện điện thoại bằng AI",
   "description": "Hệ thống khảo sát thói quen sử dụng điện thoại và học tập của học sinh để thiết kế thiết bị nhắc nhở tự học chống nghiện điện thoại.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

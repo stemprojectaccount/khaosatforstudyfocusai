@@ -226,7 +226,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col selection:bg-blue-100 selection:text-blue-950">
+    <div 
+      className="min-h-screen text-slate-800 font-sans flex flex-col selection:bg-blue-100 selection:text-blue-950"
+      style={{
+        backgroundImage: "linear-gradient(rgba(241, 245, 249, 0.92), rgba(241, 245, 249, 0.95)), url('https://i.postimg.cc/cHcYpxLS/Thiet-ke-chua-co-ten-(7).png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {/* Visual Navigation Bar */}
       <header className="bg-white border-b border-slate-200 py-4.5 px-6 md:px-10 sticky top-0 z-30 shadow-xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
