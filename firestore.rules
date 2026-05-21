@@ -18,7 +18,7 @@ service cloud.firestore {
         'q4_livingWith', 'q5_parentsHome', 'q6_hasOwnPhone', 'q7_phoneHours',
         'q8_phoneUsage', 'q9_studyWithPhone', 'q10_distractor', 'q11_experienced',
         'q12_selfStudyHours', 'q13_easilyDistracted', 'q14_wantsFocusDevice',
-        'q15_deviceOpinion', 'createdAt'
+        'q15_deviceOpinion', 'ipAddress', 'createdAt'
       ])
       && data.fullName is string && data.fullName.size() <= 150
       && data.birthDate is string && data.birthDate.size() <= 15
@@ -37,6 +37,7 @@ service cloud.firestore {
       && data.q13_easilyDistracted is string && data.q13_easilyDistracted.size() <= 15
       && data.q14_wantsFocusDevice is string && data.q14_wantsFocusDevice.size() <= 15
       && data.q15_deviceOpinion is string && data.q15_deviceOpinion.size() <= 40
+      && data.ipAddress is string && data.ipAddress.size() <= 50
       && (!data.keys().hasAny(['q16_phoneImpact']) || (data.q16_phoneImpact is string && data.q16_phoneImpact.size() <= 2000))
       && (!data.keys().hasAny(['q17_desiredFeatures']) || (data.q17_desiredFeatures is string && data.q17_desiredFeatures.size() <= 2000))
       && data.createdAt == request.time;
@@ -46,8 +47,9 @@ service cloud.firestore {
       // Create is public as long as format is strictly correct
       allow create: if isValidId(responseId) && isValidSurveyResponse(request.resource.data);
       
-      // Reading: Only signed-in administrators can list or read for evaluation
-      allow read, list: if request.auth != null;
+      // Reading: Allow unauthenticated get, list only if constrained to limit of 1 (prevent harvesting), or if signed in admin
+      allow get: if true;
+      allow list: if request.auth != null || (request.query.limit != null && request.query.limit <= 1);
 
       // Update and delete are forbidden for everyone
       allow update, delete: if false;

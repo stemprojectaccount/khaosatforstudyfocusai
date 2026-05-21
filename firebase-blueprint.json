@@ -81,6 +81,10 @@
           "type": "string",
           "description": "Any desired features for the study device"
         },
+        "ipAddress": {
+          "type": "string",
+          "description": "User's IP Address for entry locking"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -102,6 +106,7 @@
         "q13_easilyDistracted",
         "q14_wantsFocusDevice",
         "q15_deviceOpinion",
+        "ipAddress",
         "createdAt"
       ]
     }

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, query, where, getDocs, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { SurveyResponse, SurveyStep } from './types';
 import SurveyIntro from './components/SurveyIntro';
@@ -7,8 +7,41 @@ import SurveyProgress from './components/SurveyProgress';
 import SurveyForm from './components/SurveyForm';
 import SuccessView from './components/SuccessView';
 import AdminDashboard from './components/AdminDashboard';
-import { BookOpen, ShieldCheck, Milestone } from 'lucide-react';
+import { BookOpen, ShieldCheck, Milestone, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+// Helper to fetch user's public IP
+const fetchIpAddress = async (): Promise<string | null> => {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    if (!res.ok) throw new Error('Network response non-ok');
+    const data = await res.json();
+    return data.ip || null;
+  } catch (err) {
+    console.warn('Failed to fetch IP via ipify, trying fallback...', err);
+    try {
+      const res2 = await fetch('https://ipapi.co/json/');
+      if (!res2.ok) throw new Error('API request failed');
+      const data2 = await res2.json();
+      return data2.ip || null;
+    } catch (err2) {
+      console.error('All IP resolution options failed', err2);
+      return null;
+    }
+  }
+};
+
+// Helper to check if IP already exists in Firestore
+const checkIfIpSubmitted = async (ip: string): Promise<boolean> => {
+  try {
+    const q = query(collection(db, 'survey_responses'), where('ipAddress', '==', ip), limit(1));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (err) {
+    console.error('Error querying backend for IP:', err);
+    return false;
+  }
+};
 
 // Step progress configuration
 const STEP_TITLES = ['Bắt đầu', 'Thông tin chung', 'Màn hình & Điện thoại', 'Thói quen tự học', 'Ý kiến tự sự'];
@@ -20,6 +53,48 @@ export default function App() {
   const [fullName, setFullName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // IP limit checking states
+  const [userIp, setUserIp] = useState<string>('');
+  const [isCheckingDuplicity, setIsCheckingDuplicity] = useState(true);
+  const [hasSubmittedBefore, setHasSubmittedBefore] = useState<boolean>(() => {
+    return localStorage.getItem('has_submitted_survey') === 'true';
+  });
+
+  // Verify IP uniqueness on load
+  useEffect(() => {
+    let active = true;
+
+    // Quick local storage check bypass
+    if (localStorage.getItem('has_submitted_survey') === 'true') {
+      setHasSubmittedBefore(true);
+      setIsCheckingDuplicity(false);
+      return;
+    }
+
+    const verifyDeviceSafety = async () => {
+      const ip = await fetchIpAddress();
+      if (!active) return;
+
+      if (ip) {
+        setUserIp(ip);
+        const alreadySubmitted = await checkIfIpSubmitted(ip);
+        if (!active) return;
+
+        if (alreadySubmitted) {
+          setHasSubmittedBefore(true);
+          localStorage.setItem('has_submitted_survey', 'true');
+        }
+      }
+      setIsCheckingDuplicity(false);
+    };
+
+    verifyDeviceSafety();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Initializing empty choices format matching schema
   const [answers, setAnswers] = useState<Partial<SurveyResponse>>({
@@ -120,10 +195,15 @@ export default function App() {
         q15_deviceOpinion: answers.q15_deviceOpinion,
         q16_phoneImpact: answers.q16_phoneImpact?.trim() || '',
         q17_desiredFeatures: answers.q17_desiredFeatures?.trim() || '',
+        ipAddress: userIp || 'unknown', // Save public IP/device identifier
         createdAt: serverTimestamp() // Satisfies Temporal Integrity constraints
       };
 
       await addDoc(collection(db, path), payload);
+      
+      // Permanently mark this client device as submitted to prevent double surveys
+      localStorage.setItem('has_submitted_survey', 'true');
+      setHasSubmittedBefore(true);
       setStep('success');
     } catch (err) {
       console.error(err);
@@ -175,8 +255,41 @@ export default function App() {
 
       {/* Main Container Content */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 flex flex-col justify-center">
-        {adminMode ? (
-          <AdminDashboard onBack={() => setAdminMode(false)} />
+        {hasSubmittedBefore ? (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-md w-full mx-auto bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center space-y-6 my-6 md:my-10"
+          >
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-100">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <div className="space-y-2.5">
+              <h2 className="text-base font-black text-slate-900 uppercase tracking-tight col-cyan-900">
+                Em đã gửi câu trả lời rồi!
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Để đảm bảo tính khách quan của cuộc nghiên cứu khoa học học đường, mỗi học sinh (trên mỗi thiết bị và địa chỉ IP mạng) chỉ được tham gia trả lời phiếu khảo sát một lần duy nhất.
+              </p>
+              {userIp && (
+                <div className="pt-2">
+                  <span className="inline-block text-[10px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-150 px-2.5 py-1 rounded">
+                    Địa chỉ IP ghi nhận: {userIp}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="pt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              Cảm ơn em đã đóng góp ý kiến cho đề tài khoa học!
+            </div>
+          </motion.div>
+        ) : isCheckingDuplicity ? (
+          <div className="flex flex-col items-center justify-center min-h-[300px] space-y-3.5">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest animate-pulse">
+              Đang xác thực hệ thống bảo mật...
+            </p>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Display progress if we already entered questionnaire state */}
