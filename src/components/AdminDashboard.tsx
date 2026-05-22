@@ -139,7 +139,7 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
     const usagesList = ['Học tập', 'Chơi game', 'Xem TikTok/Facebook', 'Nhắn tin', 'Khác'];
     const studyPhones = ['Thường xuyên', 'Thỉnh thoảng', 'Hiếm khi'];
     const distractors = ['Điện thoại', 'Game', 'Mạng xã hội', 'Tiếng ồn', 'Khác'];
-    const experiences = ['Thức khuya vì điện thoại', 'Quên học bài vì điện thoại', 'Bị bố mẹ nhắc nhở nhiều lần'];
+    const experiences = ['Thức khuya vì điện thoại', 'Quên học bài vì điện thoại', 'Bị bố mẹ nhắc nhở nhiều lần', 'Khác'];
     const studyHoursArr = ['Dưới 1 giờ', '1–2 giờ', '2–4 giờ', 'Trên 4 giờ'];
     const deviceOpinions = ['Rất cần thiết', 'Cần thiết', 'Bình thường', 'Không cần thiết'];
     const impacts = [

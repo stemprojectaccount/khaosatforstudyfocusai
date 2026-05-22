@@ -389,6 +389,7 @@ export default function SurveyForm({
                       {renderCheckboxCard('q11_experienced', 'Thức khuya vì điện thoại', 'Buồn ngủ, mệt mỏi, thức rất khuya vì mải xem điện thoại', '🌙')}
                       {renderCheckboxCard('q11_experienced', 'Quên học bài vì điện thoại', 'Mê mẩn điện thoại dẫn đến quên làm bài tập / lười chuẩn bị bài', '📝')}
                       {renderCheckboxCard('q11_experienced', 'Bị bố mẹ nhắc nhở nhiều lần', 'Bị bố mẹ nhắc nhở dữ dội, tịch thu điện thoại nhiều lần', '😤')}
+                      {renderCheckboxCard('q11_experienced', 'Khác', 'Khác hoặc chưa từng gặp các tình huống trên', '🛡️')}
                     </div>
                   </div>
                 </motion.div>
