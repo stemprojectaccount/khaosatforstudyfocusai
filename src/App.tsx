@@ -54,12 +54,26 @@ export default function App() {
   const [birthDate, setBirthDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Admin access secret states
+  const [showPassModal, setShowPassModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [logoClicks, setLogoClicks] = useState(0);
+
   // IP limit checking states
   const [userIp, setUserIp] = useState<string>('');
   const [isCheckingDuplicity, setIsCheckingDuplicity] = useState(true);
   const [hasSubmittedBefore, setHasSubmittedBefore] = useState<boolean>(() => {
     return localStorage.getItem('has_submitted_survey') === 'true';
   });
+
+  // Check URL query parameters on mount or load for easy admin bypass
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === 'true' || params.get('mode') === 'admin') {
+      setAdminMode(true);
+    }
+  }, []);
 
   // Verify IP uniqueness on load
   useEffect(() => {
@@ -95,6 +109,28 @@ export default function App() {
       active = false;
     };
   }, []);
+
+  // Secret password submit
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === 'admin123' || passwordInput === '123456') {
+      setAdminMode(true);
+      setShowPassModal(false);
+      setPasswordInput('');
+      setLoginError('');
+    } else {
+      setLoginError('Mật mã quản trị chưa chính xác. Vui lòng thử lại.');
+    }
+  };
+
+  const handleLogoClick = () => {
+    const nextClicks = logoClicks + 1;
+    setLogoClicks(nextClicks);
+    if (nextClicks >= 5) {
+      setShowPassModal(true);
+      setLogoClicks(0);
+    }
+  };
 
   // Initializing empty choices format matching schema
   const [answers, setAnswers] = useState<Partial<SurveyResponse>>({
@@ -225,9 +261,23 @@ export default function App() {
     return 5;
   };
 
+  if (adminMode) {
+    return (
+      <AdminDashboard 
+        onBack={() => {
+          setAdminMode(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('admin');
+          url.searchParams.delete('mode');
+          window.history.replaceState({}, '', url.pathname);
+        }} 
+      />
+    );
+  }
+
   return (
     <div 
-      className="min-h-screen text-slate-800 font-sans flex flex-col selection:bg-blue-100 selection:text-blue-950"
+      className="min-h-screen text-slate-800 font-sans flex flex-col selection:bg-blue-100 selection:text-blue-950 relative"
       style={{
         backgroundImage: "linear-gradient(rgba(241, 245, 249, 0.92), rgba(241, 245, 249, 0.95)), url('https://i.postimg.cc/cHcYpxLS/Thiet-ke-chua-co-ten-(7).png')",
         backgroundSize: 'cover',
@@ -239,8 +289,9 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 py-4.5 px-6 md:px-10 sticky top-0 z-30 shadow-xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div 
-            onClick={handleResetSurvey} 
+            onClick={handleLogoClick} 
             className="flex items-center gap-2.5 md:gap-3 cursor-pointer group select-none"
+            title="Click 5 lần để đăng nhập Quản Trị Viên"
           >
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform duration-200">
               <BookOpen className="w-5 h-5" />
@@ -256,98 +307,132 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Admin trigger button removed for client safety */}
+            <button
+              onClick={() => setShowPassModal(true)}
+              className="text-xs font-bold text-slate-400 hover:text-blue-600 cursor-pointer flex items-center gap-1.5 transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Quản trị viên</span>
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Container Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 flex flex-col justify-center">
-        {hasSubmittedBefore ? (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md w-full mx-auto bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center space-y-6 my-6 md:my-10"
-          >
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-100">
-              <AlertCircle className="w-8 h-8" />
-            </div>
-            <div className="space-y-2.5">
-              <h2 className="text-base font-black text-slate-900 uppercase tracking-tight col-cyan-900">
-                Em đã gửi câu trả lời rồi!
-              </h2>
-              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                Để đảm bảo tính khách quan của cuộc nghiên cứu khoa học học đường, mỗi học sinh (trên mỗi thiết bị và địa chỉ IP mạng) chỉ được tham gia trả lời phiếu khảo sát một lần duy nhất.
-              </p>
-              {userIp && (
-                <div className="pt-2">
-                  <span className="inline-block text-[10px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-150 px-2.5 py-1 rounded">
-                    Địa chỉ IP ghi nhận: {userIp}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="pt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-              Cảm ơn em đã đóng góp ý kiến cho đề tài khoa học!
-            </div>
-          </motion.div>
-        ) : isCheckingDuplicity ? (
-          <div className="flex flex-col items-center justify-center min-h-[300px] space-y-3.5">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest animate-pulse">
-              Đang xác thực hệ thống bảo mật...
+      {/* Main Container Content containing the Survey Closed screen */}
+      <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 flex flex-col justify-center items-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-2xl w-full bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 p-8 md:p-12 text-center space-y-8 my-6 md:my-10 relative overflow-hidden"
+        >
+          {/* Subtle Accent Stripe */}
+          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600" />
+
+          {/* Icon Badge */}
+          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto border border-blue-100 shadow-xs">
+            <ShieldCheck className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-4">
+            <span className="inline-block px-3 py-1 text-[10px] font-black tracking-widest text-blue-600 bg-blue-50 border border-blue-200 rounded-full uppercase animate-pulse">
+              KHẢO SÁT ĐÃ ĐÓNG • SURVEY CLOSED
+            </span>
+            <h1 className="text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight leading-tight">
+              Khảo sát chống nghiện điện thoại bằng AI
+            </h1>
+            <p className="text-sm md:text-base text-slate-650 leading-relaxed font-medium pt-2 max-w-lg mx-auto">
+              Bài khảo sát này đã kết thúc. Xin cảm ơn bạn đã truy cập vào làm nhưng rất tiếc bài khảo sát đã kết thúc, xin hẹn gặp lại lần sau!
             </p>
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Display progress if we already entered questionnaire state */}
-            {step !== 'intro' && step !== 'success' && (
-              <SurveyProgress
-                currentStep={getStepNumberValue()}
-                totalSteps={5}
-                stepTitles={STEP_TITLES}
-              />
-            )}
 
-            <AnimatePresence mode="wait">
-              {step === 'intro' && (
-                <SurveyIntro
-                  key="intro"
-                  onStart={handleStartSurvey}
-                />
-              )}
-
-              {step !== 'intro' && step !== 'success' && (
-                <SurveyForm
-                  key="form"
-                  fullName={fullName}
-                  birthDate={birthDate}
-                  step={step}
-                  answers={answers}
-                  setAnswers={setAnswers}
-                  onPrev={handlePrevStep}
-                  onNext={handleNextStep}
-                  onSubmit={handleSubmitSurvey}
-                  isSubmitting={isSubmitting}
-                />
-              )}
-
-              {step === 'success' && (
-                <SuccessView
-                  key="success"
-                  fullName={fullName}
-                  onReset={handleResetSurvey}
-                />
-              )}
-            </AnimatePresence>
+          {/* Social Proof / Metadata */}
+          <div className="grid grid-cols-3 gap-4 py-4 border-t border-b border-slate-100 max-w-md mx-auto text-center">
+            <div>
+              <div className="text-lg font-black text-blue-600">100%</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Học sinh THCS</div>
+            </div>
+            <div className="border-l border-r border-slate-150">
+              <div className="text-lg font-black text-slate-800">Cấp độ 6-9</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Khối lớp khảo sát</div>
+            </div>
+            <div>
+              <div className="text-lg font-black text-indigo-600">AI Study</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Đề tài NCKH</div>
+            </div>
           </div>
-        )}
+
+          <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider pt-2">
+            Đề tài: Thiết kế thiết bị nhắc học bài tự học chống nghiện điện thoại AI
+          </div>
+        </motion.div>
       </main>
+
+      {/* Secret Password Entry Modal for Administrator Login */}
+      <AnimatePresence>
+        {showPassModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-4"
+            >
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                <span className="font-extrabold text-sm text-slate-900 uppercase tracking-tight flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  Đăng nhập Quản trị viên
+                </span>
+                <button 
+                  onClick={() => { setShowPassModal(false); setLoginError(''); }}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-semibold cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-1">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Nhập Mật mã Quản trị:
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Nhập PIN hoặc mật mã (admin123)..."
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
+                    autoFocus
+                  />
+                  {loginError && (
+                    <p className="text-xs text-red-500 font-semibold">{loginError}</p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
+                >
+                  Xác nhận Truy cập
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Humble Footer */}
       <footer className="py-6 border-t border-slate-100 px-6 text-center text-[11px] text-slate-400 font-semibold space-y-1 bg-white shrink-0 mt-8">
         <p>© 2026 Nghiên cứu "Thiết bị nhắc học bài chống nghiện điện thoại bằng AI"</p>
-        <p className="font-mono text-[9px] text-slate-350">
+        <p 
+          onClick={handleLogoClick}
+          className="font-mono text-[9px] text-slate-350 cursor-pointer select-none hover:text-slate-500 transition-colors"
+        >
           Powered by Google AI Studio Sandbox • Secure Firestore Integration
         </p>
       </footer>
